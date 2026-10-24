@@ -204,6 +204,22 @@ pip install pytest
 python -m pytest tests/ -q
 ```
 
+### Continuous integration
+
+Two GitHub Actions workflows live in `.github/workflows/`:
+
+- **`ci.yml`** — runs the unit tests (Python 3.10 and 3.12) and byte-compiles
+  every module on each push and pull request to `main`.
+- **`scan.yml`** — runs a passive scan on a daily cron (and on demand via
+  *Run workflow*), renders the HTML + Markdown report, uploads it as the
+  `easm-report` artifact, and **fails the run when new findings appear** since
+  the previous scan. Scan history is cached between runs so change detection has
+  a baseline. It uses the free in-process pipeline — no AWS/Bedrock needed.
+
+  Set the domains to scan by editing `DEFAULT_SEEDS` in `scan.yml` (for the cron
+  run) or by entering seeds in the *Run workflow* dialog. **Only scan domains you
+  own or are authorized to assess.**
+
 ---
 
 ## Reports (HTML / Markdown)

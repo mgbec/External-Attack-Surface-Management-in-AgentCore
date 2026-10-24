@@ -1,0 +1,109 @@
+name: Scheduled EASM Scan
+
+# Runs a passive attack-surface scan on a schedule, renders an HTML + Markdown
+# report, uploads it as an artifact, and fails the run when NEW findings appear
+# since the previous scan.
+#
+# This uses the free, in-process pipeline (no AWS / Bedrock required). Only
+# passive sources (CT logs, DNS, RDAP) plus ordinary HTTP/TLS requests are used,
+# so it is safe to run against domains you own or are authorized to assess.
+#
+# IMPORTANT: set the SEEDS below (or pass them via the manual "Run workflow"
+# dialog) to domains you are authorized to scan.
+
+on:
+  schedule:
+    # 06:00 UTC daily. Adjust as needed.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      seeds:
+        description: "Space-separated seed domains to scan"
+        required: true
+        default: "example.com"
+      max_depth:
+        description: "Recursion depth"
+        required: false
+        default: "2"
+      fail_on_new_findings:
+        description: "Fail the run if new findings appear"
+        type: boolean
+        required: false
+        default: true
+
+# Default seeds for the scheduled (cron) run. Edit this to your domains.
+env:
+  DEFAULT_SEEDS: "example.com"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install discovery dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install dnspython httpx cryptography
+
+      # Persist scan history across runs so change-detection has a baseline.
+      - name: Restore scan history
+        uses: actions/cache@v4
+        with:
+          path: scan-output/history
+          # A rolling key so each run restores the latest cache and writes a new one.
+          key: easm-history-${{ github.run_id }}
+          restore-keys: |
+            easm-history-
+
+      - name: Build scan config
+        run: |
+          SEEDS="${{ github.event.inputs.seeds || env.DEFAULT_SEEDS }}"
+          DEPTH="${{ github.event.inputs.max_depth || '2' }}"
+          python - "$SEEDS" "$DEPTH" <<'PY'
+          import json, sys
+          seeds = sys.argv[1].split()
+          depth = int(sys.argv[2])
+          cfg = {"seeds": {"domains": seeds}, "options": {"max_depth": depth}}
+          with open("scan.ci.json", "w") as fh:
+              json.dump(cfg, fh, indent=2)
+          print("Scanning:", seeds, "depth", depth)
+          PY
+
+      - name: Run scan + render report
+        id: scan
+        run: |
+          FLAG=""
+          if [ "${{ github.event.inputs.fail_on_new_findings || 'true' }}" = "true" ]; then
+            FLAG="--fail-on-new-findings"
+          fi
+          set +e
+          python schedule_scan.py --config scan.ci.json --out-dir scan-output \
+            --html --md $FLAG
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          set -e
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: easm-report
+          path: |
+            scan-output/report-*.html
+            scan-output/report-*.md
+            scan-output/latest.json
+            scan-output/diff-*.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Fail if new findings were detected
+        if: steps.scan.outputs.exit_code != '0'
+        run: |
+          echo "::error::New attack-surface findings detected since the last scan. See the easm-report artifact."
+          exit 1
