@@ -192,6 +192,36 @@ no VPC/NAT is needed.
 
 To go even cheaper on tokens, switch `model_id` to `us.amazon.nova-lite-v1:0`.
 
+### Worked example (ballpark)
+
+Using published rates (late 2026): AgentCore Runtime at **$0.0895/vCPU-hour +
+$0.00945/GB-hour** (per-second billing) and Claude 3.5 Haiku on Bedrock at
+**~$0.80/1M input** and **~$4.00/1M output** tokens.
+
+A single scan sends the model only a trimmed summary (capped at ~120 assets), so:
+
+| Per scan | Amount | Rate | Cost |
+|---|---|---|---|
+| Discovery (CT, DNS, RDAP, TLS, HTTP) | — | free | **$0** |
+| Model input (inventory + findings summary) | ~8,000 tok | $0.80/1M | ~$0.0064 |
+| Model output (the report) | ~1,500 tok | $4.00/1M | ~$0.0060 |
+| Runtime compute | ~90s · 1 vCPU / 2 GB | per-second | ~$0.003 |
+| **Total** | | | **~$0.015** |
+
+So about **1.5 cents per scan**. Monthly, by cadence:
+
+| Cadence | Scans/mo | Est. monthly cost |
+|---|---|---|
+| Daily, one org | ~30 | **~$0.45** |
+| Daily, 10 domains | ~300 | **~$4.50** |
+| Hourly, one org | ~720 | **~$11** |
+
+Caveats: these are estimates from public rates, not a quote; token volume scales
+with how many assets/findings a scan produces (bounded by the 120-asset cap).
+Running the scheduled scan on **GitHub Actions** instead of AgentCore uses the
+deterministic pipeline with no LLM, so that path costs **$0**. The first ~$200 of
+AgentCore usage is covered by Free Tier credits.
+
 ---
 
 ## Tests

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EASM on Bedrock AgentCore — Presentation</title>
+<style>
+  :root{
+    --bg:#0b1120; --panel:#111a2e; --ink:#e8eefc; --muted:#9fb0d0;
+    --accent:#4f8cff; --accent2:#22d3ee; --good:#34d399; --warn:#fbbf24;
+    --bad:#f87171; --line:#223150; --code:#0f1830;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(1200px 700px at 70% -10%,#17233f 0,var(--bg) 60%);
+    color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    overflow:hidden;
+  }
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;display:none;
+    flex-direction:column;justify-content:center;
+    padding:6vh 8vw;animation:fade .4s ease;
+  }
+  .slide.active{display:flex}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .kicker{color:var(--accent2);font-weight:700;letter-spacing:.14em;
+    text-transform:uppercase;font-size:clamp(11px,1.1vw,14px);margin-bottom:14px}
+  h1{font-size:clamp(30px,5vw,62px);line-height:1.05;letter-spacing:-.02em;margin-bottom:18px}
+  h2{font-size:clamp(24px,3.4vw,42px);line-height:1.1;letter-spacing:-.01em;margin-bottom:22px}
+  .lede{font-size:clamp(16px,1.7vw,22px);color:var(--muted);max-width:60ch;line-height:1.5}
+  ul{list-style:none;display:flex;flex-direction:column;gap:14px;margin-top:8px}
+  li{font-size:clamp(15px,1.5vw,21px);line-height:1.4;padding-left:30px;position:relative;max-width:68ch}
+  li::before{content:"";position:absolute;left:0;top:.55em;width:11px;height:11px;
+    border-radius:3px;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+  li b{color:#fff}
+  .grid{display:grid;gap:18px;margin-top:10px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:20px 22px}
+  .card h3{font-size:clamp(15px,1.5vw,20px);margin-bottom:8px;color:#fff}
+  .card p{color:var(--muted);font-size:clamp(13px,1.2vw,16px);line-height:1.45}
+  .stat{font-size:clamp(28px,4vw,52px);font-weight:800;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;line-height:1}
+  .stat-lbl{color:var(--muted);font-size:clamp(12px,1.1vw,15px);margin-top:8px;
+    text-transform:uppercase;letter-spacing:.06em}
+  code,pre{font-family:"SF Mono",Consolas,"Roboto Mono",monospace}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:12px;
+    padding:18px 20px;font-size:clamp(12px,1.15vw,16px);line-height:1.55;
+    color:#cfe0ff;overflow:auto;margin-top:8px}
+  .pill{display:inline-block;background:#16233f;border:1px solid var(--line);
+    color:var(--muted);border-radius:999px;padding:4px 12px;font-size:13px;margin:4px 6px 0 0}
+  .flow{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .node{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:10px 14px;font-size:clamp(12px,1.2vw,16px)}
+  .node.seed{border-color:var(--accent)}
+  .node.out{border-color:var(--good)}
+  .arrow{color:var(--accent2);font-size:20px}
+  .good{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:clamp(13px,1.3vw,18px)}
+  th,td{text-align:left;padding:11px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--accent2);text-transform:uppercase;font-size:12px;letter-spacing:.06em}
+  td.num{font-weight:700;color:#fff}
+  .foot{position:absolute;bottom:22px;left:8vw;right:8vw;display:flex;
+    justify-content:space-between;align-items:center;color:#5f74a0;font-size:13px}
+  .progress{position:absolute;top:0;left:0;height:3px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s}
+  .hint{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);
+    color:#3f527a;font-size:12px}
+  .title-wrap{max-width:70ch}
+  .badge{display:inline-flex;gap:8px;align-items:center;background:#16233f;
+    border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;
+    color:var(--muted);margin-bottom:26px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--good)}
+  .two{display:grid;grid-template-columns:1.1fr .9fr;gap:34px;align-items:center}
+  @media(max-width:820px){.two{grid-template-columns:1fr}.g3,.g4{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- 1 — Title -->
+  <section class="slide active">
+    <div class="title-wrap">
+      <div class="badge"><span class="dot"></span> Amazon Bedrock AgentCore · Passive Discovery</div>
+      <div class="kicker">External Attack Surface Management</div>
+      <h1>Find what the internet<br>knows about you —<br>before an attacker does.</h1>
+      <p class="lede">A cheap, serverless EASM tool that discovers an organization's
+      internet-facing assets from a handful of root domains, scores what truly belongs
+      to it, and flags exposures — built on Bedrock AgentCore.</p>
+    </div>
+  </section>
+
+  <!-- 2 — Problem -->
+  <section class="slide">
+    <div class="kicker">The problem</div>
+    <h2>You can't defend what you don't know you own</h2>
+    <div class="grid g3">
+      <div class="card"><h3>Shadow assets</h3><p>Forgotten subdomains, staging boxes,
+        and old cloud resources sit exposed with no one watching them.</p></div>
+      <div class="card"><h3>No single inventory</h3><p>Real orgs own many domains and
+        IP ranges across teams, clouds, and acquisitions — there's no one list.</p></div>
+      <div class="card"><h3>Commercial EASM is pricey</h3><p>Enterprise platforms cost
+        thousands a month. Teams want the same visibility for a fraction of that.</p></div>
+    </div>
+    <p class="lede" style="margin-top:26px">The attack surface is the set of assets an
+    attacker can reach from the internet. The hard part isn't attacking it — it's
+    <b class="good">discovering and attributing</b> it.</p>
+  </section>
+
+  <!-- 3 — What it does -->
+  <section class="slide">
+    <div class="kicker">The approach</div>
+    <h2>One seed set in → a scored inventory + findings out</h2>
+    <div class="two">
+      <div>
+        <ul>
+          <li>You provide <b>root domains</b> (plus optional org names / IP ranges).</li>
+          <li>The tool <b>expands</b> each seed into the full asset list — you don't
+            need an inventory up front, the inventory is the output.</li>
+          <li>Every asset gets a <b>confidence score</b> for whether it really belongs
+            to the org.</li>
+          <li>Deterministic rules surface <b>exposures</b>; a small LLM triages and
+            writes the report.</li>
+        </ul>
+      </div>
+      <div class="flow" style="flex-direction:column;align-items:stretch">
+        <div class="node seed">seeds: example.com, example.net, …</div>
+        <div class="arrow" style="text-align:center">↓</div>
+        <div class="node">passive discovery + attribution</div>
+        <div class="arrow" style="text-align:center">↓</div>
+        <div class="node out">scored inventory · findings · report</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 — Passive discovery -->
+  <section class="slide">
+    <div class="kicker">How discovery works</div>
+    <h2>Passive sources — query third parties, not the target</h2>
+    <div class="grid g3">
+      <div class="card"><h3>Certificate Transparency</h3><p>Public cert logs (crt.sh)
+        reveal subdomains — the single biggest source of discovery. Free.</p></div>
+      <div class="card"><h3>DNS</h3><p>Resolve hosts to IPs, follow CNAMEs, catch
+        dangling records (subdomain-takeover risk). Free.</p></div>
+      <div class="card"><h3>RDAP / ASN</h3><p>Pivot IPs to the netblocks and orgs that
+        own them, and domains to their registrant. Free.</p></div>
+      <div class="card"><h3>TLS inspection</h3><p>Read the cert: expiry, weak crypto,
+        and SANs that reveal even more hostnames (fed back in).</p></div>
+      <div class="card"><h3>HTTP inspection</h3><p>Ordinary requests surface missing
+        security headers and version-leaking banners.</p></div>
+      <div class="card"><h3>Shodan / Censys</h3><p>Optional port/service data from a
+        third party's scans. Off by default, behind free-tier keys.</p></div>
+    </div>
+    <p class="lede" style="margin-top:22px"><b class="good">Safe by design:</b> no
+    intrusive scanning — only public data and normal, browser-like web traffic.</p>
+  </section>
+
+  <!-- 5 — Recursive expansion -->
+  <section class="slide">
+    <div class="kicker">The engine</div>
+    <h2>Discovery is recursive, and it terminates cheaply</h2>
+    <div class="flow">
+      <span class="node seed">seed domain</span><span class="arrow">→</span>
+      <span class="node">CT logs → subdomains</span><span class="arrow">→</span>
+      <span class="node">DNS → IPs</span><span class="arrow">→</span>
+      <span class="node">RDAP → netblock</span>
+    </div>
+    <div class="flow">
+      <span class="node">TLS cert → new SANs</span><span class="arrow">↺</span>
+      <span class="node">feed hostnames back to CT/DNS</span>
+    </div>
+    <ul style="margin-top:22px">
+      <li>A cert reveals a subdomain → resolve it → its IP reveals a netblock → loop.</li>
+      <li>Bounded by <b>max&nbsp;depth</b>, <b>max&nbsp;assets</b>, concurrency, and
+        per-request timeouts — so a scan finishes fast and stays cheap.</li>
+    </ul>
+  </section>
+
+  <!-- 6 — Multi-seed attribution -->
+  <section class="slide">
+    <div class="kicker">The hard problem</div>
+    <h2>Attribution: does this asset actually belong to you?</h2>
+    <div class="two">
+      <div>
+        <ul>
+          <li>Finding more assets is easy. Knowing which are <b>really yours</b> is the
+            hard part — pivots can pull in neighbors.</li>
+          <li>Each asset records <b>which seeds led to it</b>. Corroboration across
+            multiple independent seeds raises confidence.</li>
+          <li>Score blends <b>method strength</b>, <b>seed corroboration</b>, and
+            <b>depth</b> into a 0–1 value.</li>
+          <li>Below 0.5 → <b class="warn">flagged for human review</b>, never asserted
+            as yours automatically.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Method → base confidence</h3>
+        <table>
+          <tr><td>Seed (you gave it)</td><td class="num">1.00</td></tr>
+          <tr><td>CT log cert</td><td class="num">0.85</td></tr>
+          <tr><td>DNS from known host</td><td class="num">0.80</td></tr>
+          <tr><td>TLS SAN</td><td class="num">0.75</td></tr>
+          <tr><td>RDAP registration</td><td class="num">0.60</td></tr>
+          <tr><td>Shared netblock (ASN)</td><td class="num warn">0.45</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 — Architecture -->
+  <section class="slide">
+    <div class="kicker">Architecture</div>
+    <h2>Deterministic engine + a thin, cheap LLM layer</h2>
+    <div class="grid g2">
+      <div class="card">
+        <h3>The pipeline (pure Python)</h3>
+        <p>Does all the network discovery, dedup, attribution scoring, and rule-based
+        findings. Reproducible and free — <b>no tokens spent here</b>.</p>
+      </div>
+      <div class="card">
+        <h3>Strands agent on AgentCore Runtime</h3>
+        <p>The LLM only sees a <b>compact JSON summary</b>: it triages, prioritizes, and
+        writes the report. It never invents findings.</p>
+      </div>
+    </div>
+    <pre>from bedrock_agentcore import BedrockAgentCoreApp
+from strands import Agent
+app = BedrockAgentCoreApp()
+
+@app.entrypoint
+async def handler(request):          # {"seeds": {"domains": [...]}}
+    result = await run_scan(config)  # deterministic — no model tokens
+    yield {"type": "scan_result", "data": result.to_dict()}
+    agent = Agent(model="claude-3-5-haiku", system_prompt=ANALYST)
+    async for e in agent.stream_async(summary):   # cheap triage + report
+        yield e</pre>
+  </section>
+
+  <!-- 8 — Cheap by design -->
+  <section class="slide">
+    <div class="kicker">Why it's cheap</div>
+    <h2>Every cost lever pulled toward zero</h2>
+    <table>
+      <thead><tr><th>Component</th><th>Typical cost driver</th><th>This project</th></tr></thead>
+      <tbody>
+        <tr><td>Discovery sources</td><td>—</td><td class="good">$0 — all free public data</td></tr>
+        <tr><td>Bedrock model</td><td>tokens</td><td class="good">cents/scan — small model, summary only</td></tr>
+        <tr><td>AgentCore Runtime</td><td>vCPU-seconds</td><td>billed per request, not idle</td></tr>
+        <tr><td>NAT Gateway</td><td class="bad">~$33/mo always-on</td><td class="good">avoided — no VPC attached</td></tr>
+        <tr><td>Browser / Code Interpreter</td><td class="bad">metered, pricey</td><td class="good">not used</td></tr>
+        <tr><td>Memory</td><td>per-event</td><td class="good">not used — stateless scans</td></tr>
+      </tbody>
+    </table>
+    <p class="lede" style="margin-top:20px">Keeping the runtime out of a VPC is the
+    single biggest decision — it dodges a <b class="bad">$33/month</b> NAT bill while idle.</p>
+  </section>
+
+  <!-- 9 — Cost estimate -->
+  <section class="slide">
+    <div class="kicker">What it costs</div>
+    <h2>About 1.5¢ per scan — pennies a month</h2>
+    <div class="two">
+      <div>
+        <table>
+          <thead><tr><th>Per scan</th><th></th><th>Cost</th></tr></thead>
+          <tbody>
+            <tr><td>Discovery (CT, DNS, RDAP, TLS, HTTP)</td><td>free data</td><td class="good">$0</td></tr>
+            <tr><td>Bedrock Haiku tokens</td><td>~8K in / 1.5K out</td><td class="num">~$0.012</td></tr>
+            <tr><td>AgentCore Runtime</td><td>~90s · 1 vCPU / 2 GB</td><td class="num">~$0.003</td></tr>
+            <tr><td><b>Total</b></td><td></td><td class="num">~$0.015</td></tr>
+          </tbody>
+        </table>
+        <p class="lede" style="margin-top:16px;font-size:clamp(14px,1.4vw,18px)">
+        Rates (late 2026): Runtime $0.0895/vCPU-hr + $0.00945/GB-hr · Haiku
+        $0.80/$4.00 per 1M tokens in/out.</p>
+      </div>
+      <div class="card">
+        <h3>Monthly, by cadence</h3>
+        <table>
+          <tr><td>Daily · one org</td><td class="num">~$0.45</td></tr>
+          <tr><td>Daily · 10 domains</td><td class="num">~$4.50</td></tr>
+          <tr><td>Hourly · one org</td><td class="num">~$11</td></tr>
+        </table>
+        <p style="color:var(--muted);margin-top:14px;font-size:14px;line-height:1.5">
+        Run the scheduled scan on <b class="good">GitHub Actions</b> instead and the
+        deterministic path costs <b class="good">$0</b> — no tokens, no runtime.</p>
+      </div>
+    </div>
+    <p class="lede" style="margin-top:18px"><b class="good">$0 idle</b> · <b class="good">no
+    NAT ($33/mo avoided)</b> · <b class="good">first $200 free-tier credits</b>. Ballpark
+    from published rates, not a quote.</p>
+  </section>
+
+  <!-- 10 — Findings -->
+  <section class="slide">
+    <div class="kicker">What it catches</div>
+    <h2>Exposure findings, severity-ranked</h2>
+    <div class="grid g4">
+      <div class="card"><h3 class="bad">High</h3><p>Expired certs · dangling CNAMEs
+        (takeover) · exposed Redis/Mongo/RDP/Telnet</p></div>
+      <div class="card"><h3 class="warn">Medium</h3><p>Expiring-soon certs · self-signed
+        · weak signature algorithms · exposed SSH/DB ports</p></div>
+      <div class="card"><h3 style="color:var(--accent)">Low</h3><p>Missing HSTS/CSP ·
+        version-leaking banners · no HTTPS redirect</p></div>
+      <div class="card"><h3 class="good">Reporting</h3><p>Self-contained HTML + Markdown
+        report, with a change-diff vs the previous scan</p></div>
+    </div>
+    <p class="lede" style="margin-top:24px">Rules are <b>deterministic</b> — objective and
+    reproducible. The model prioritizes by real-world risk; it doesn't fabricate.</p>
+  </section>
+
+  <!-- 11 — Operate -->
+  <section class="slide">
+    <div class="kicker">Operating it</div>
+    <h2>Run locally free · deploy serverless · schedule for drift</h2>
+    <div class="grid g3">
+      <div class="card"><h3>Run local</h3><p>Full pipeline with no AWS. Iterate for $0.</p>
+        <pre style="margin-top:12px">python run_local.py \
+  example.com example.net</pre></div>
+      <div class="card"><h3>Deploy</h3><p>One command to AgentCore Runtime via the CLI.</p>
+        <pre style="margin-top:12px">agentcore configure \
+  --entrypoint easm/agent.py
+agentcore deploy</pre></div>
+      <div class="card"><h3>Schedule</h3><p>Daily scan + change detection; alerts on
+        <i>new</i> exposure.</p>
+        <pre style="margin-top:12px">schedule_scan.py \
+  --fail-on-new-findings</pre></div>
+    </div>
+    <p class="lede" style="margin-top:22px">Plus <b>CI on GitHub Actions</b> — tests on
+    every push, and a scheduled scan that uploads the HTML report as an artifact.</p>
+  </section>
+
+  <!-- 12 — Results -->
+  <section class="slide">
+    <div class="kicker">Proof it works</div>
+    <h2>Verified end-to-end</h2>
+    <div class="grid g4">
+      <div class="card"><div class="stat">33</div><div class="stat-lbl">unit tests passing</div></div>
+      <div class="card"><div class="stat">5</div><div class="stat-lbl">free discovery sources</div></div>
+      <div class="card"><div class="stat">~¢</div><div class="stat-lbl">per scan in tokens</div></div>
+      <div class="card"><div class="stat">$0</div><div class="stat-lbl">idle infra cost</div></div>
+    </div>
+    <ul style="margin-top:26px">
+      <li>Live scan of a seed domain discovered subdomains, IPs, and netblocks with
+        correct per-seed attribution and dedup.</li>
+      <li>CI green on Python 3.10 &amp; 3.12; report renders to valid HTML + Markdown.</li>
+      <li>Shipped to GitHub with tests, scheduler, report renderer, and automation.</li>
+    </ul>
+  </section>
+
+  <!-- 13 — Close -->
+  <section class="slide">
+    <div class="title-wrap">
+      <div class="kicker">Summary</div>
+      <h1>Enterprise-grade visibility,<br>near-zero cost.</h1>
+      <ul style="margin-top:10px">
+        <li>Multi-seed <b>passive discovery</b> — safe, legal, free data sources.</li>
+        <li><b>Attribution scoring</b> that knows what's really yours vs. a neighbor.</li>
+        <li>Serverless on <b>Bedrock AgentCore</b>, engineered around every cost trap.</li>
+      </ul>
+      <p class="lede" style="margin-top:22px">
+        <span class="pill">Passive discovery</span>
+        <span class="pill">Multi-seed attribution</span>
+        <span class="pill">Deterministic findings</span>
+        <span class="pill">Strands + AgentCore</span>
+        <span class="pill">Cheap by design</span>
+      </p>
+    </div>
+  </section>
+
+  <div class="progress" id="bar"></div>
+  <div class="foot"><span>EASM on Bedrock AgentCore</span><span id="pager">1 / 13</span></div>
+  <div class="hint">← → or Space to navigate · F for fullscreen</div>
+</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    document.getElementById('bar').style.width=((i+1)/slides.length*100)+'%';
+    document.getElementById('pager').textContent=(i+1)+' / '+slides.length;
+  }
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();show(i+1)}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();show(i-1)}
+    else if(e.key==='Home'){show(0)} else if(e.key==='End'){show(slides.length-1)}
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+  });
+  // Click right/left half to advance/retreat.
+  document.getElementById('deck').addEventListener('click',e=>{
+    if(e.target.closest('pre'))return;
+    show(e.clientX>window.innerWidth/2?i+1:i-1);
+  });
+  show(0);
+</script>
+</body>
+</html>
