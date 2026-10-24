@@ -173,6 +173,44 @@ findings) followed by `report_delta` events (the LLM's prioritized report).
 
 ---
 
+## Model choice
+
+The default model is **Claude 3.5 Haiku**
+(`us.anthropic.claude-3-5-haiku-20241022-v1:0`), and it's deliberately a small one.
+
+The reason is how little the LLM actually does. The deterministic pipeline does
+all the hard, objective work — discovery, dedup, attribution scoring, and
+rule-based findings — using zero tokens. The model only ever sees a **compact
+JSON summary** and performs a narrow task: prioritize findings by real-world
+risk, reason about which low-confidence assets to flag for review, and write the
+report. That's summarization-and-reasoning over structured data — no code
+generation, no long reasoning chains, no tool orchestration — so it does not
+need a frontier model.
+
+Given that, a small model is the right default:
+
+- **Cost:** ~$0.80/$4.00 per 1M input/output tokens → about a cent per report.
+  A Sonnet-class model costs several times more for no real gain on this task.
+- **Speed:** faster responses also mean fewer runtime vCPU-seconds billed while
+  the agent waits on the model.
+- **Inference profile:** the `us.` prefix is a cross-region inference profile,
+  which is how Bedrock expects on-demand invocation. `deploy/bedrock-invoke-policy.json`
+  grants access to both the foundation-model and inference-profile ARNs.
+
+It's **configurable**, not hardcoded — set `options.model_id` (per request or in
+config) or the `EASM_MODEL_ID` env var:
+
+- Cheaper: `us.amazon.nova-lite-v1:0` (also covered by the IAM policy).
+- Richer narrative: step up to a Sonnet-class model if you want and will pay for it.
+
+**Safety guardrail that makes a small model sound here:** the system prompt
+forbids the model from inventing assets or findings — it reasons only over the
+provided data. All security-relevant facts (what's exposed, confidence scores)
+come from deterministic rules, not the model. So the worst case from a small
+model is a less polished report, never a fabricated "all clear."
+
+---
+
 ## Cost notes (why this stays cheap)
 
 | Component | Cost driver | This project |

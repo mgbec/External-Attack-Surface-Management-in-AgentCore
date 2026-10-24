@@ -261,7 +261,38 @@ async def handler(request):          # {"seeds": {"domains": [...]}}
     single biggest decision — it dodges a <b class="bad">$33/month</b> NAT bill while idle.</p>
   </section>
 
-  <!-- 9 — Cost estimate -->
+  <!-- 9 — Model choice -->
+  <section class="slide">
+    <div class="kicker">Model choice</div>
+    <h2>Small model by design — because the LLM does little</h2>
+    <div class="two">
+      <div>
+        <ul>
+          <li>The <b>pipeline</b> does the hard, objective work — discovery,
+            attribution, findings — with <b>zero tokens</b>.</li>
+          <li>The model only reads a <b>compact summary</b> and triages, prioritizes,
+            and writes the report. No code-gen, no long reasoning.</li>
+          <li>So the cheapest capable model wins: <b>Claude 3.5 Haiku</b> (default)
+            — ~1¢ per report, fast, fewer runtime seconds billed.</li>
+          <li><b>Configurable</b> via <code>model_id</code> / <code>EASM_MODEL_ID</code>.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Pick your point on the curve</h3>
+        <table>
+          <tr><td>Nova Lite</td><td class="good">cheapest</td></tr>
+          <tr><td><b>Haiku 3.5</b> (default)</td><td class="num">~1¢ / report</td></tr>
+          <tr><td>Sonnet-class</td><td class="warn">richer, pricier</td></tr>
+        </table>
+        <p style="color:var(--muted);margin-top:14px;font-size:14px;line-height:1.5">
+        <b class="good">Guardrail:</b> the model may not invent findings — it reasons
+        only over data the rules produced. Worst case is a less polished report, never
+        a fabricated "all clear."</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 — Cost estimate -->
   <section class="slide">
     <div class="kicker">What it costs</div>
     <h2>About 1.5¢ per scan — pennies a month</h2>
@@ -297,7 +328,7 @@ async def handler(request):          # {"seeds": {"domains": [...]}}
     from published rates, not a quote.</p>
   </section>
 
-  <!-- 10 — Findings -->
+  <!-- 11 — Findings -->
   <section class="slide">
     <div class="kicker">What it catches</div>
     <h2>Exposure findings, severity-ranked</h2>
@@ -315,7 +346,7 @@ async def handler(request):          # {"seeds": {"domains": [...]}}
     reproducible. The model prioritizes by real-world risk; it doesn't fabricate.</p>
   </section>
 
-  <!-- 11 — Operate -->
+  <!-- 12 — Operate -->
   <section class="slide">
     <div class="kicker">Operating it</div>
     <h2>Run locally free · deploy serverless · schedule for drift</h2>
@@ -336,7 +367,7 @@ agentcore deploy</pre></div>
     every push, and a scheduled scan that uploads the HTML report as an artifact.</p>
   </section>
 
-  <!-- 12 — Results -->
+  <!-- 13 — Results -->
   <section class="slide">
     <div class="kicker">Proof it works</div>
     <h2>Verified end-to-end</h2>
@@ -354,7 +385,7 @@ agentcore deploy</pre></div>
     </ul>
   </section>
 
-  <!-- 13 — Close -->
+  <!-- 14 — Close -->
   <section class="slide">
     <div class="title-wrap">
       <div class="kicker">Summary</div>
@@ -375,7 +406,7 @@ agentcore deploy</pre></div>
   </section>
 
   <div class="progress" id="bar"></div>
-  <div class="foot"><span>EASM on Bedrock AgentCore</span><span id="pager">1 / 13</span></div>
+  <div class="foot"><span>EASM on Bedrock AgentCore</span><span id="pager">1 / 14</span></div>
   <div class="hint">← → or Space to navigate · F for fullscreen</div>
 </div>
 
