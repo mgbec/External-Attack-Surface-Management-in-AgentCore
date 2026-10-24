@@ -79,6 +79,36 @@
   .dot{width:8px;height:8px;border-radius:50%;background:var(--good)}
   .two{display:grid;grid-template-columns:1.1fr .9fr;gap:34px;align-items:center}
   @media(max-width:820px){.two{grid-template-columns:1fr}.g3,.g4{grid-template-columns:1fr 1fr}}
+
+  /* ---- Recording helpers ------------------------------------------------ */
+  /* Reserve a bottom-right zone so a webcam overlay never covers content.
+     Enabled by default so slide content stays clear of the camera bubble;
+     the hint box shows its outline only when guides are toggled on (G). */
+  .slide{padding-bottom:clamp(140px,22vh,260px)}        /* keep text above cam */
+  .foot{right:calc(8vw + 320px)}                        /* pager clear of cam */
+
+  .cam-zone{
+    position:fixed;right:40px;bottom:40px;
+    width:clamp(220px,20vw,320px);height:clamp(165px,15vw,240px);
+    border-radius:18px;pointer-events:none;z-index:40;display:none;
+    border:2px dashed #3a4f7a;background:rgba(30,45,75,.25);
+  }
+  .cam-zone::after{
+    content:"webcam goes here";position:absolute;left:0;right:0;bottom:8px;
+    text-align:center;color:#6f84b0;font-size:12px;letter-spacing:.04em;
+  }
+  body.guides .cam-zone{display:block}
+
+  /* Presenter notes: hidden by default, shown with N. Printed cue for the
+     speaker; not meant to be on-camera, but handy on a second monitor. */
+  .notes{
+    position:fixed;left:8vw;right:calc(8vw + 320px);bottom:64px;z-index:45;
+    background:rgba(10,18,36,.94);border:1px solid var(--line);border-radius:12px;
+    padding:12px 16px;color:#b9c8e8;font-size:clamp(13px,1.3vw,17px);line-height:1.45;
+    display:none;
+  }
+  body.notes-on .slide.active .notes{display:block}
+  @media print{.cam-zone,.hint{display:none}}
 </style>
 </head>
 <body>
@@ -94,6 +124,7 @@
       internet-facing assets from a handful of root domains, scores what truly belongs
       to it, and flags exposures — built on Bedrock AgentCore.</p>
     </div>
+    <div class="notes">Hi, I'm [name]. This is an external attack surface management tool I built on Amazon Bedrock AgentCore — it finds your internet-facing assets before an attacker does, and it runs for pennies. Let me show you.</div>
   </section>
 
   <!-- 2 — Problem -->
@@ -111,6 +142,7 @@
     <p class="lede" style="margin-top:26px">The attack surface is the set of assets an
     attacker can reach from the internet. The hard part isn't attacking it — it's
     <b class="good">discovering and attributing</b> it.</p>
+    <div class="notes">You can't defend what you don't know you own. Forgotten subdomains and cloud resources sit exposed; there's no single inventory. Commercial tools cost thousands a month — I wanted that visibility for pennies.</div>
   </section>
 
   <!-- 3 — What it does -->
@@ -137,6 +169,7 @@
         <div class="node out">scored inventory · findings · report</div>
       </div>
     </div>
+    <div class="notes">Give it a seed set — root domains, maybe an org name or IP ranges — and it expands that into your full inventory. You don't need an asset list up front; the inventory is the output, scored by confidence.</div>
   </section>
 
   <!-- 4 — Passive discovery -->
@@ -159,6 +192,7 @@
     </div>
     <p class="lede" style="margin-top:22px"><b class="good">Safe by design:</b> no
     intrusive scanning — only public data and normal, browser-like web traffic.</p>
+    <div class="notes">All passive — we query third parties, not the target. CT logs reveal subdomains, DNS resolves them, RDAP shows ownership, TLS/HTTP are normal requests. Shodan/Censys optional. Safe: public data and ordinary traffic only.</div>
   </section>
 
   <!-- 5 — Recursive expansion -->
@@ -180,6 +214,7 @@
       <li>Bounded by <b>max&nbsp;depth</b>, <b>max&nbsp;assets</b>, concurrency, and
         per-request timeouts — so a scan finishes fast and stays cheap.</li>
     </ul>
+    <div class="notes">Discovery is recursive: a cert reveals a subdomain, we resolve it to an IP, the IP reveals a netblock, cert SANs reveal more hostnames — fed back in. Bounded by depth/assets/timeouts so it always finishes fast and cheap.</div>
   </section>
 
   <!-- 6 — Multi-seed attribution -->
@@ -211,6 +246,7 @@
         </table>
       </div>
     </div>
+    <div class="notes">The hard problem: which assets are really yours? Every asset gets a 0–1 confidence from method strength plus multi-seed corroboration. Below the threshold, it's flagged for human review — never asserted automatically. Honest about uncertainty.</div>
   </section>
 
   <!-- 7 — Architecture -->
@@ -240,6 +276,7 @@ async def handler(request):          # {"seeds": {"domains": [...]}}
     agent = Agent(model="claude-3-5-haiku", system_prompt=ANALYST)
     async for e in agent.stream_async(summary):   # cheap triage + report
         yield e</pre>
+    <div class="notes">Two layers. The deterministic Python pipeline does discovery, dedup, attribution, and findings — zero tokens. The Strands agent on AgentCore only sees a compact summary and triages plus writes the report. The entrypoint is just a few lines.</div>
   </section>
 
   <!-- 8 — Cheap by design -->
@@ -259,6 +296,7 @@ async def handler(request):          # {"seeds": {"domains": [...]}}
     </table>
     <p class="lede" style="margin-top:20px">Keeping the runtime out of a VPC is the
     single biggest decision — it dodges a <b class="bad">$33/month</b> NAT bill while idle.</p>
+    <div class="notes">Every cost lever pulled to zero: free discovery, small model on a summary, runtime billed per request not idle. Biggest decision — no VPC, which avoids a ~$33/month NAT gateway. No browser, code interpreter, or memory.</div>
   </section>
 
   <!-- 9 — Model choice -->
@@ -290,6 +328,7 @@ async def handler(request):          # {"seeds": {"domains": [...]}}
         a fabricated "all clear."</p>
       </div>
     </div>
+    <div class="notes">I default to a small model — Haiku — on purpose. The pipeline produces the facts; the model just triages and writes, so the cheapest capable model wins at ~1¢ per report. Configurable up or down. Guardrail: it can't invent findings.</div>
   </section>
 
   <!-- 10 — Cost estimate -->
@@ -326,6 +365,7 @@ async def handler(request):          # {"seeds": {"domains": [...]}}
     <p class="lede" style="margin-top:18px"><b class="good">$0 idle</b> · <b class="good">no
     NAT ($33/mo avoided)</b> · <b class="good">first $200 free-tier credits</b>. Ballpark
     from published rates, not a quote.</p>
+    <div class="notes">Real numbers: about 1.5 cents per scan; roughly 45 cents a month for daily scans of one org; a few dollars for ten domains. Run it on GitHub Actions instead and the deterministic path is effectively free.</div>
   </section>
 
   <!-- 11 — Findings -->
@@ -344,6 +384,7 @@ async def handler(request):          # {"seeds": {"domains": [...]}}
     </div>
     <p class="lede" style="margin-top:24px">Rules are <b>deterministic</b> — objective and
     reproducible. The model prioritizes by real-world risk; it doesn't fabricate.</p>
+    <div class="notes">What it catches: expired certs and dangling records (takeover) are high; exposed databases and remote-access ports; lower-severity hygiene like missing headers. Severity-ranked, in an HTML/Markdown report with a change diff.</div>
   </section>
 
   <!-- 12 — Operate -->
@@ -365,6 +406,7 @@ agentcore deploy</pre></div>
     </div>
     <p class="lede" style="margin-top:22px">Plus <b>CI on GitHub Actions</b> — tests on
     every push, and a scheduled scan that uploads the HTML report as an artifact.</p>
+    <div class="notes">Flexible to operate: run locally for free, deploy to AgentCore in one command, or schedule daily and alert only on new exposure. Plus CI on GitHub Actions — tests on every push and a scheduled scan that uploads the report.</div>
   </section>
 
   <!-- 13 — Results -->
@@ -383,6 +425,7 @@ agentcore deploy</pre></div>
       <li>CI green on Python 3.10 &amp; 3.12; report renders to valid HTML + Markdown.</li>
       <li>Shipped to GitHub with tests, scheduler, report renderer, and automation.</li>
     </ul>
+    <div class="notes">Proof: 33 passing tests, 5 free sources, ~1¢ per scan, $0 idle. Ran it live against a real domain — correctly found subdomains, IPs, and netblocks with proper attribution. All on GitHub.</div>
   </section>
 
   <!-- 14 — Close -->
@@ -403,11 +446,13 @@ agentcore deploy</pre></div>
         <span class="pill">Cheap by design</span>
       </p>
     </div>
+    <div class="notes">To wrap: enterprise-grade attack-surface visibility for near-zero cost. Multi-seed passive discovery, honest attribution, serverless on AgentCore around every cost trap. Repo's in the description — thanks for watching, like and subscribe.</div>
   </section>
 
+  <div class="cam-zone" aria-hidden="true"></div>
   <div class="progress" id="bar"></div>
   <div class="foot"><span>EASM on Bedrock AgentCore</span><span id="pager">1 / 14</span></div>
-  <div class="hint">← → or Space to navigate · F for fullscreen</div>
+  <div class="hint">← → / Space · F fullscreen · G webcam guide · N notes</div>
 </div>
 
 <script>
@@ -427,6 +472,8 @@ agentcore deploy</pre></div>
       if(!document.fullscreenElement)document.documentElement.requestFullscreen();
       else document.exitFullscreen();
     }
+    else if(e.key.toLowerCase()==='g'){document.body.classList.toggle('guides')}
+    else if(e.key.toLowerCase()==='n'){document.body.classList.toggle('notes-on')}
   });
   // Click right/left half to advance/retreat.
   document.getElementById('deck').addEventListener('click',e=>{
