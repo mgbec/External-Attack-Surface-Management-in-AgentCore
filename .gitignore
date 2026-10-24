@@ -9,3 +9,6 @@ venv/
 scan-output/
 *.log
 .DS_Store
+
+# Presentation (kept local, not committed)
+docs/presentation.html
