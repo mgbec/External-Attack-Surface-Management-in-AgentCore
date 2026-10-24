@@ -1,0 +1,21 @@
+{
+  "seeds": {
+    "domains": ["example.com", "example.net", "example.org"],
+    "org_names": ["Example Corp"],
+    "ip_ranges": []
+  },
+  "options": {
+    "max_depth": 2,
+    "reverse_whois": "flag_only",
+    "max_assets": 2000,
+    "timeout": 8.0,
+    "concurrency": 20,
+    "inspect_http": true,
+    "inspect_tls": true,
+    "enrichment": {
+      "shodan": false,
+      "censys": false
+    },
+    "model_id": "us.anthropic.claude-3-5-haiku-20241022-v1:0"
+  }
+}

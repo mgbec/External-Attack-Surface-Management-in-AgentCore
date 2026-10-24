@@ -1,0 +1,12 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+scan-output/
+*.local.json
+.env
+.pytest_cache/
+*.md
+tests/

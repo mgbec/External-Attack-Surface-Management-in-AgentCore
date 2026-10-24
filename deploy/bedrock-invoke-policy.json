@@ -1,0 +1,20 @@
+{
+  "Version": "2012-10-17",
+  "Comment": "Least-privilege policy for the EASM agent's AgentCore execution role. Allows invoking the cheap triage model (and its cross-region inference profile) only. Attach to the AmazonBedrockAgentCoreSDKRuntime-* role.",
+  "Statement": [
+    {
+      "Sid": "InvokeCheapTriageModel",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
+        "arn:aws:bedrock:*:*:inference-profile/us.anthropic.claude-3-5-haiku-20241022-v1:0",
+        "arn:aws:bedrock:*::foundation-model/amazon.nova-lite-v1:0",
+        "arn:aws:bedrock:*:*:inference-profile/us.amazon.nova-lite-v1:0"
+      ]
+    }
+  ]
+}
